@@ -1,0 +1,281 @@
+---
+title: "midterm project"
+format: html
+editor: visual
+embed-resources: true
+---
+
+# Introduction
+The prevalence and patterns of tobacco use in the United States vary significantly by state, influenced by factors such as demographics, cultural norms, public health initiatives, and socioeconomic status. Alaska and Alabama, while both part of the U.S., represent two very different demographic and geographic profiles, with Alaska being sparsely populated and geographically isolated, and Alabama situated in the more densely populated and historically tobacco-favoring southeastern region. This project aims to examine tobacco use patterns in both states, focusing on traditional tobacco products (e.g., cigarettes, smokeless tobacco) and newer products like e-cigarettes.The choice of Alaska and Alabama offers a unique opportunity to observe how tobacco consumption may differ between a northern, frontier-like environment and a southern state with a rich history of tobacco agriculture and use. By analyzing data from 2011 to 2019, we aim to uncover trends and impacts of tobacco use policies, including the rise of e-cigarettes, and to understand whether geographic, cultural, or socioeconomic differences significantly influence these patterns. Ultimately, this analysis will contribute to a deeper understanding of regional tobacco use dynamics and provide insights to inform targeted public health interventions.
+
+The dataset I choose - Tobacco use in Alabama and Alaska from 2011 to 2019 
+
+Reference website: https://data.cdc.gov/Survey-Data/Behavioral-Risk-Factor-Data-Tobacco-Use-2011-to-pr/wsas-xwh5/about_data
+
+# The research of question 
+How has tobacco use, including traditional cigarettes, smokeless tobacco, Cessation and e-cigarettes, changed over time in Alaska and Alabama from 2017 to 2019?
+
+# Loading the data set
+```{r}
+library(dplyr)
+library(data.table) 
+library(tidyverse)
+library(ggplot2)
+Tob.Use<- data.table::fread("/Users/kristydeng/Downloads/wsas-xwh5.csv")
+Tob.Use <- Tob.Use %>%
+  rename(
+    state = locationabbr,
+    City = locationdesc
+  )
+Tob.Use <- Tob.Use %>%
+  filter(year %in% c(2017, 2018, 2019))
+```
+
+# Cleaning the data
+The data set is from 2011 to 2019. By the raw data comparison I realized that Alaska is stats from 2017. The data prior to 2017 is not comparable. Thus, I need to delete the data prior to 2017,
+```{r}
+Tob.Use <- Tob.Use %>%
+  filter(year %in% c(2017, 2018, 2019))
+Tob.Use <- Tob.Use %>%
+  filter(!is.na(data_value))
+```
+
+# Research
+
+#1.The Number of people of "Cessation(Adults)""Cigarette Use(Adults)""Smokeless Tobacoo Use (Adults)"and "E-Cigarette Use (Adults)"in Alabama from 2017 to 2019 seperatley.
+
+```{r}
+library(dplyr)
+alabama_counts <- Tob.Use %>%
+  filter(City == "Alabama") %>%  
+  group_by(year, topicdesc) %>%  
+  summarise(count = n())
+alabama_counts
+```
+
+#2.The Number of people of "Cessation(Adults)""Cigarette Use(Adults)""Smokeless Tobacoo Use (Adults)"and "E-Cigarette Use (Adults)"in Alaska from 2017 to 2019 seperatley.
+
+```{r}
+library(dplyr)
+alaska_counts <- Tob.Use %>%
+  filter(City == "Alaska") %>%  
+  group_by(year, topicdesc,) %>%  
+  summarise(count = n())
+alaska_counts
+```
+#3.How has tobacco use among adults in Alabama and Alaska changed over time from 2017 to 2019?
+```{r}
+library(ggplot2)
+library(dplyr)
+filtered_data <- Tob.Use %>%
+  filter(state %in% c("AL", "AK"), year >= 2017, year <= 2019) %>%
+  filter(!is.na(data_value)) %>%
+  filter(topicdesc %in% c("Smokeless Tobacco Use (Adults)", 
+                          "E-Cigarette Use (Adults)", 
+                          "Cigarette Use (Adults)", 
+                          "Cessation (Adults)"))
+ggplot(filtered_data, aes(x = as.factor(year), y = data_value, fill = state)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~ topicdesc, scales = "free_y") +
+  labs(
+    title = "Tobacco Use and Cessation Trends in Alabama and Alaska (2017-2019)",
+    x = "Year",
+    y = "Percentage of Users",
+    fill = "State"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 55, hjust = 1))  
+```
+Analyze: Based on the trends from 2017 to 2019, several insights emerge regarding tobacco use and cessation patterns in Alabama and Alaska: Cessation Rates, both Alabama and Alaska show similar cessation rates for adults, with a slight increase in cessation over the years. This trend suggests growing efforts or successes in reducing smoking habits. Cigarette use among adults remains consistently high in both states across the three years, with no significant reduction. This persistence indicates that cigarette smoking is still prevalent despite the introduction of alternatives like e-cigarettes.The adoption of e-cigarettes is notable in both states, especially in Alabama, where usage increased from 2017 to 2018, stabilizing afterward. E-cigarette use is an emerging trend, possibly contributing to the cessation rates as some smokers transition to these alternatives.Smokeless tobacco use remains relatively high and stable, particularly in Alabama. This steady trend suggests that smokeless tobacco remains a significant part of tobacco use habits in certain regions.Overall, while cessation efforts are noticeable, traditional cigarette use remains robust. The rise in e-cigarette use may indicate a shift in tobacco consumption methods rather than an outright reduction in overall tobacco use. The persistent use of both cigarettes and smokeless tobacco highlights the need for continued public health efforts to reduce overall tobacco consumption in Alabama and Alaska.
+
+#4.How does tobacco use vary between males and females in Alabama and Alaska from 2017 to 2019?(The gender summary table will highlight whether males or females are more likely to use tobacco products)
+```{r}
+library(ggplot2)
+library(dplyr)
+summary_by_gender <- Tob.Use %>%
+  filter(gender != "Overall") %>%
+  group_by(state, gender, topicdesc) %>%
+  summarise(
+    mean_usage = mean(data_value, na.rm = TRUE),
+    sd_usage = sd(data_value, na.rm = TRUE),
+    count = n()
+  )
+summary_by_gender
+filtered_data_gender <- Tob.Use %>%
+  filter(state %in% c("AL", "AK"), year >= 2017, year <= 2019) %>%
+  filter(topicdesc %in% c("Smokeless Tobacco Use (Adults)", 
+                          "E-Cigarette Use (Adults)", 
+                          "Cigarette Use (Adults)", 
+                          "Cessation (Adults)")) %>%
+  filter(!is.na(data_value)) %>%
+  filter(gender %in% c("Female", "Male"))  # Exclude "overall"
+ggplot(filtered_data_gender, aes(x = as.factor(year), y = data_value, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.7) +
+  facet_grid(topicdesc ~ state, scales = "free_y") +  
+  labs(
+    title = "Tobacco Use by Gender in Alabama and Alaska (2017-2019)",
+    x = "Year",
+    y = "Percentage of Users",
+    fill = "Gender"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 55, hjust = 1),
+    strip.text.y = element_text(size = 4, margin = margin(20, 20, 20, 20)) 
+  )
+```
+Analyze:Across different tobacco categories (smokeless tobacco, e-cigarette use, cigarette use, and cessation efforts), there is a noticeable variation in usage rates between males and females in both states. Males generally tend to have higher usage rates in smokeless tobacco and cigarette use compared to females, indicating that these forms of tobacco are more popular among males. E-cigarette use shows more balanced rates between males and females, particularly in certain years, suggesting it may be a preferred alternative across genders or that its usage trends are evolving over time in a similar pattern for both groups.The cessation rates are also depicted, and there appears to be some gender variation in quit attempts. This might imply different levels of motivation or effectiveness of cessation programs across genders.While both states show similar gender patterns, the overall percentages of usage may vary slightly. This can reflect regional cultural differences or state-specific public health initiatives that influence tobacco consumption.
+
+#5.How does the average tobacco use differ between Alabama and Alaska across the years 2017-2019? (the table grouped by state will show the overall tobacco use trends in Alabama and Alaska)
+```{r}
+summary_by_state <- Tob.Use %>%
+  filter(year >= 2017, year <= 2019, state %in% c("AL", "AK")) %>%
+  filter(!is.na(data_value)) %>%
+  group_by(state, topicdesc) %>%
+  summarise(
+    mean_usage = mean(data_value, na.rm = TRUE),
+    sd_usage = sd(data_value, na.rm = TRUE),
+    count = n()
+  )
+summary_by_state
+ggplot(Tob.Use %>% filter(year >= 2017, year <= 2019), aes(x = topicdesc, y = data_value, fill = state)) +
+  geom_boxplot() +
+  labs(
+    title = "Tobacco Use Trends in Alabama and Alaska (2011-2019)",
+    x = "Tobacco Use Category",
+    y = "Usage Percentage",
+    fill = "State"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+Analyze：The average cessation rate in Alaska (55.38%) is slightly higher than in Alabama (54.76%). This suggests that a higher percentage of adults in Alaska are attempting to quit tobacco use compared to Alabama. The low standard deviation for cessation in both states implies a consistent cessation rate over time. The boxplot further supports this, showing minimal variability for cessation rates, indicating that efforts to encourage quitting have been similarly effective in both states.Both Alaska and Alabama have similar average cigarette use rates among adults, with Alaska at 30.13% and Alabama at 30.40%. However, the boxplot reveals that Alaska has more variability in cigarette usage compared to Alabama, indicating fluctuations in use over time or among different demographics.The wider distribution in Alaska's cigarette use rates suggests potential differences in subpopulations or regions within the state, with some years or groups experiencing higher usage rates.E-cigarette use is slightly higher in Alabama (20.94%) compared to Alaska (18.60%). Both states show high variability in e-cigarette use, as indicated by the high standard deviations. The boxplot also highlights significant variation, suggesting evolving trends in e-cigarette adoption between the two states. This variability might be influenced by differing public attitudes, regulatory measures, or access to e-cigarette products during this period.The average smokeless tobacco use is higher in Alabama (23.16%) compared to Alaska (22.33%). The boxplot shows that Alabama has a broader range in smokeless tobacco use, indicating a wider spread across different years or subgroups. Despite the higher average usage in Alabama, both states have similar levels of variability, suggesting stable usage patterns within each state. The wider box in Alabama implies more variability in how smokeless tobacco is used, likely driven by cultural factors or differing social acceptance. Overall, The boxplot illustrates that cessation rates are consistently high and stable across both states, whereas other forms of tobacco (cigarettes, e-cigarettes, smokeless tobacco) have more variability and generally lower median usage percentages. Alabama generally shows slightly higher average usage across different tobacco categories except for cessation, where Alaska has the lead. The high standard deviations observed in cigarette and e-cigarette usage indicate that these tobacco products have not reached a stable usage pattern, reflecting changes in public perception, regulation, or access to alternative tobacco products over time. The Public Health impact: The relatively high cessation rates in both Alaska and Alabama indicate that smoking cessation programs and awareness campaigns are effective. However, the variability in cigarette, e-cigarette, and smokeless tobacco usage calls for more targeted interventions, particularly in Alabama, where usage rates and variability are higher. Further efforts could focus on reducing the adoption of e-cigarettes and smokeless tobacco among young adults and addressing the factors contributing to these trends, ultimately leading to improved public health outcomes in both states.
+
+#6.Analysis of Tobacco Use by Education Level in Alabama and Alaska (2017-2019)
+```{r}
+library(dplyr)
+library(ggplot2)
+edu_summary <- Tob.Use %>%
+  filter(year >= 2017, year <= 2019, 
+         state %in% c("AL", "AK"), 
+         education != "All Grades") %>% 
+  filter(!is.na(data_value)) %>%
+  group_by(state, education) %>%
+  summarise(
+    mean_usage = mean(data_value, na.rm = TRUE),
+    sd_usage = sd(data_value, na.rm = TRUE),
+    count = n()
+  )
+print(edu_summary)
+ggplot(Tob.Use %>% filter(year >= 2017, year <= 2019, 
+                          state %in% c("AL", "AK"), 
+                          education != "All Grades"),  # Exclude "All Grades"
+       aes(x = education, y = data_value, fill = state)) +
+  geom_boxplot() +
+  labs(
+    title = "Tobacco Use Based on Education Levels in Alabama and Alaska (2017-2019)",
+    x = "Education Level",
+    y = "Usage Percentage",
+    fill = "State"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+Analyze: The tobacco use rate differs significantly depending on the education level. Generally, individuals with education levels below the 12th grade show higher average tobacco usage compared to those with higher education levels.In Alaska, individuals with below 12th-grade education have an average tobacco usage of 27.11%, whereas in Alabama, it is 19.66%. The higher usage in Alaska suggests that lower educational attainment is more strongly associated with tobacco use in Alaska than in Alabama.The boxplot shows that tobacco use rates for individuals with below 12th-grade education have greater variability in Alaska compared to Alabama, indicating wider disparities in usage.The mean tobacco usage among individuals with exactly 12th-grade education is similar in both states, with Alaska having a mean of 15.84% and Alabama having a mean of 14.72%. The boxplot shows comparable ranges for both states, suggesting that individuals who completed high school in both states exhibit similar tobacco use behavior.Individuals with education levels greater than 12th grade have the lowest average tobacco use in both states, with Alaska at 6.94% and Alabama at 8.81%. The relatively low values and minimal variation suggest that higher education correlates with reduced tobacco use across both states. Overall, The boxplot and summary table together highlight that education level plays a significant role in tobacco consumption. Lower education levels are associated with higher tobacco usage rates, while those with higher education levels (greater than 12th grade) exhibit the lowest tobacco use.Alaska tends to have a slightly higher average usage compared to Alabama across different education levels, particularly among those with lower educational attainment. Public Health Implications: These findings suggest that education level is a key factor in tobacco use behavior. Public health efforts in Alaska and Alabama should focus on providing targeted tobacco cessation programs for individuals with lower education levels, especially those who did not complete high school. Additionally, the data supports the need for educational campaigns to emphasize the health risks of tobacco use, particularly targeting populations with lower education levels.
+
+#7.The mean of different age in different type of tobacco use in Alabama and Alaska
+```{r}
+data_filtered <- Tob.Use %>%
+  filter(state %in% c('AL', 'AK'), year >= 2017 & year <= 2019) %>%
+  filter(!is.na(data_value))
+data_filtered$data_value <- as.numeric(as.character(data_filtered$data_value))
+age_tobacco_summary <- data_filtered %>%
+  group_by(state, topicdesc, age) %>%
+  summarise(mean_usage = mean(data_value, na.rm = TRUE),
+            count = n())
+print(age_tobacco_summary)
+library(ggplot2)
+ggplot(age_tobacco_summary, aes(x = age, y = mean_usage, fill = topicdesc)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Mean Tobacco Use by Age Group and Type in Alabama (2017-2019)",
+       x = "Age Group", y = "Mean Tobacco Use (%)") +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
+Analyze: The chart indicates that different tobacco products have distinct usage patterns across age groups. Cigarettes remain the most widely used product, especially among adults aged 25-44 years, while e-cigarette use is relatively higher among younger adults (18-24 years). Smokeless tobacco has lower usage compared to the other products.The high cessation rate among the "All Ages" group is encouraging, suggesting successful efforts in helping adults quit tobacco. However, targeted interventions should focus on reducing cigarette use among middle-aged adults and addressing the popularity of e-cigarettes among younger populations to help curb future tobacco-related health issues.
+
+#8.Comparing Tobacco Use Across Different Types of Use in Alasaka
+```{r}
+library(dplyr)
+library(ggplot2)
+alaska_data <- Tob.Use %>%
+  filter(City == 'Alaska', year >= 2017 & year <= 2019) %>%
+  filter(!is.na(data_value))  
+alaska_data$data_value <- as.numeric(as.character(alaska_data$data_value))
+anova_result <- aov(data_value ~ topicdesc, data = alaska_data)
+summary(anova_result)
+alaska_summary <- alaska_data %>%
+  group_by(topicdesc) %>%
+  summarise(mean_usage = mean(data_value, na.rm = TRUE),
+            sd_usage = sd(data_value, na.rm = TRUE),
+            count = n())
+ggplot(alaska_summary, aes(x = reorder(topicdesc, -mean_usage), y = mean_usage)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  coord_flip() + 
+  labs(title = "Mean Tobacco Use Across Different Types in Alaska (2017-2019)",
+       x = "Type of Tobacco Use", y = "Mean Tobacco Use (%)") +
+  theme_minimal()
+```
+Result: There are statistically significant differences in the mean tobacco use across the different types of tobacco use in Alaska from 2017 to 2019 (P<0.05).The chart shows a clear difference in the mean usage percentages across different types of tobacco use.The cessation category shows the highest mean, followed by cigarette use, while e-cigarette use has the lowest mean.
+
+#9.Comparing Tobacco Use Across Different Types of Use in Alabama.
+```{r}
+library(dplyr)
+library(ggplot2)
+alabama_data <- Tob.Use %>%
+  filter(City == 'Alabama', year >= 2017 & year <= 2019) %>%
+  filter(!is.na(data_value))  
+alabama_data$data_value <- as.numeric(as.character(alabama_data$data_value))
+anova_result <- aov(data_value ~ topicdesc, data = alabama_data)
+summary(anova_result)
+alabama_summary <- alabama_data %>%
+  group_by(topicdesc) %>%
+  summarise(mean_usage = mean(data_value, na.rm = TRUE),
+            sd_usage = sd(data_value, na.rm = TRUE),
+            count = n())
+ggplot(alabama_summary, aes(x = reorder(topicdesc, -mean_usage), y = mean_usage)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  coord_flip() +  # Flip the bar chart for better readability
+  labs(title = "Mean Tobacco Use Across Different Types in Alabama (2017-2019)",
+       x = "Type of Tobacco Use", y = "Mean Tobacco Use (%)") +
+  theme_minimal()
+```
+Result: There are statistically significant differences in the mean tobacco use across the different types of tobacco use in Alabama from 2017 to 2019.Cessation has the highest mean, indicating a strong focus on quitting attempts, while e-cigarette use has the lowest mean.
+
+# Conclusion:
+Between 2017 and 2019, tobacco use in Alaska and Alabama has exhibited notable trends across different products: traditional cigarettes, smokeless tobacco, and e-cigarettes.
+
+Traditional Cigarette Use remained prevalent in both states, with the highest rates observed among middle-aged adults. In both Alaska and Alabama, cigarette use showed consistency over the three years, indicating a persistent challenge despite tobacco cessation efforts. Alabama showed slightly higher rates of cigarette use overall compared to Alaska, which suggests regional differences in smoking behavior and possibly in intervention effectiveness.
+
+E-Cigarette Use displayed a rising trend, especially among younger adults. The data showed that e-cigarette adoption was more significant among individuals aged 18-24 years, reflecting a broader trend where younger populations are increasingly turning to e-cigarettes as an alternative to traditional cigarettes. Both Alaska and Alabama saw increases in e-cigarette use, with this product becoming a more prominent form of tobacco use during this period.
+
+Smokeless Tobacco Use remained relatively low compared to other forms of tobacco, but its presence was more pronounced among younger adults in Alaska than in Alabama. Over the three-year period, smokeless tobacco usage rates were stable but less substantial compared to traditional cigarettes and e-cigarettes, suggesting it is not as popular or accessible as other tobacco forms.
+
+Cessation Efforts showed encouraging results in both states, with stable and relatively high rates of cessation observed in the data. This indicates the ongoing effectiveness of public health campaigns aimed at reducing tobacco use. However, cessation rates need to be sustained and potentially expanded to younger age groups, particularly to counter the rising trend in e-cigarette use.
+
+Tobacco use in Alaska and Alabama from 2017 to 2019 demonstrated divergent trends for different products. Traditional cigarette use has remained high but steady, indicating a need for continued cessation support. Meanwhile, e-cigarette use has been increasing, especially among young adults, representing an emerging public health concern. Smokeless tobacco, while less popular, maintained a consistent presence, particularly in Alaska. Public health efforts should continue targeting traditional cigarette use while intensifying focus on preventing the rise in e-cigarette use, especially among younger populations, to ensure effective tobacco control in both states.
+
+# Potential Factors Behind Observed Trends
+The high cessation rates observed in both Alaska and Alabama suggest that public health campaigns and smoking cessation programs have been effective. Campaigns promoting the harmful effects of smoking and the availability of support resources such as hotlines, counseling, and nicotine replacement therapies likely played a role in driving people away from traditional cigarettes.here may have been targeted advertisements during this period aimed at specific age groups, particularly younger adults, which could have impacted the reduction in cigarette use and increased cessation attempts.
+
+E-cigarettes have been heavily marketed as a "safer alternative" to traditional smoking, which has resonated particularly well with younger adults. Flavored e-cigarettes, sleek designs, and social media campaigns may have contributed to the rising popularity of e-cigarettes among individuals aged 18-24.There has been a growing perception, especially among younger individuals, that e-cigarettes are less harmful compared to traditional cigarettes. This perception has likely driven increased adoption of e-cigarettes over time, as people believe they are making a healthier choice.
+
+Policy measures such as increasing tobacco taxes and implementing smoke-free policies in public spaces may have deterred traditional cigarette use. If Alabama or Alaska implemented more stringent regulations during this time, it could explain the observed decline in cigarette use in some age groups.Certain flavor bans on tobacco products may have influenced smokeless tobacco use, especially among younger individuals who may have preferred flavored products. Policies banning flavored tobacco could have decreased usage, making these products less attractive.
+
+The availability and accessibility of e-cigarettes have likely contributed to the growth of their usage. Vape shops and online sales channels may have made e-cigarettes more accessible, particularly to young people. Moreover, online purchasing channels made it easier for younger users to bypass age restrictions.Smokeless tobacco is often more popular in rural areas, which may explain why Alaska, with a larger rural population compared to Alabama, exhibits higher smokeless tobacco usage. Access to smokeless tobacco in rural regions may have contributed to the sustained usage rates observed.
+Differences in cultural norms and the social acceptance of tobacco products in Alabama versus Alaska may have affected usage rates. For instance, smokeless tobacco might be more socially acceptable in Alaska, leading to its higher usage rate. Conversely, in Alabama, traditional cigarettes have been more prevalent due to historical social habits.Peer influence is a major factor behind e-cigarette usage, especially in younger age groups. The increased adoption of e-cigarettes among young adults may be linked to social pressures and the popularity of e-cigarettes in schools and social circles.
+
+Economic factors like disposable income can significantly impact tobacco use. Increases in cigarette prices due to tax policies could have made cigarettes less affordable, encouraging smokers to either quit or switch to e-cigarettes, which are often perceived as a more economical option.The economic environment in Alabama and Alaska might also play a role. If one state experienced higher unemployment rates or economic challenges, individuals might have been less inclined to spend money on cigarettes and turned to alternatives like e-cigarettes.
+
+Increased awareness of the health risks associated with traditional cigarette and smokeless tobacco use has likely influenced people’s choices, leading to higher cessation rates and a shift toward e-cigarettes. Public health initiatives educating people about the dangers of tobacco have been a key factor in reducing usage rates.The period from 2017 to 2019 was marked by emerging scientific evidence about e-cigarettes, particularly concerning their potential risks and benefits. While early perceptions led to increased use, more recent evidence pointing to health risks may have caused some individuals to reconsider their usage.
+
+
